@@ -16,3 +16,4 @@
 .aws-sam
 .devcontainer
 helloworld-go/node_modules/
+helloworld-go/node-test/node_modules/

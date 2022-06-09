@@ -14,6 +14,10 @@ Globals:
     TracingEnabled: True
 
 Resources:
+  TestPerfBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: testperf-bucket
   HelloWorldFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
@@ -31,6 +35,10 @@ Resources:
       Environment: # More info about Env Vars: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#environment-object
         Variables:
           PARAM1: VALUE
+      Policies:
+        -
+          S3ReadPolicy:
+            BucketName: !Ref TestPerfBucket
   NodeTestFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
@@ -45,10 +53,10 @@ Resources:
           Properties:
             Path: /node-test
             Method: get
-  TestPerfBucket:
-    Type: 'AWS::S3::Bucket'
-    Properties:
-      BucketName: testperf-bucket
+      Policies:
+        -
+          S3ReadPolicy:
+            BucketName: !Ref TestPerfBucket
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
