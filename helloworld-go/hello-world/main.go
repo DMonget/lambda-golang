@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/csv"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -14,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/gocarina/gocsv"
 )
 
 var (
@@ -32,16 +31,16 @@ type App struct {
 }
 
 type CsvEntry struct {
-	ColA string
-	ColB string
-	ColC string
-	ColD string
-	ColE string
-	ColF string
-	ColG string
-	ColH string
-	ColI string
-	ColJ string
+	ColA string `csv:"ColA"`
+	ColB string `csv:"ColB"`
+	ColC string `csv:"ColC"`
+	ColD string `csv:"ColD"`
+	ColE string `csv:"ColE"`
+	ColF string `csv:"ColF"`
+	ColG string `csv:"ColG"`
+	ColH string `csv:"ColH"`
+	ColI string `csv:"ColI"`
+	ColJ string `csv:"ColJ"`
 }
 
 type FileParseResult struct {
@@ -49,43 +48,7 @@ type FileParseResult struct {
 	RowCount int
 }
 
-func parseCsvEntry(data [][]string) []CsvEntry {
-	var entryList []CsvEntry
-	for i, line := range data {
-		if i > 0 { // omit header line
-			var entry CsvEntry
-			for j, field := range line {
-				if j == 0 {
-					entry.ColA = field
-				} else if j == 1 {
-					entry.ColB = field
-				} else if j == 2 {
-					entry.ColB = field
-				} else if j == 3 {
-					entry.ColB = field
-				} else if j == 4 {
-					entry.ColB = field
-				} else if j == 5 {
-					entry.ColB = field
-				} else if j == 6 {
-					entry.ColB = field
-				} else if j == 7 {
-					entry.ColB = field
-				} else if j == 8 {
-					entry.ColB = field
-				} else if j == 9 {
-					entry.ColB = field
-				} else if j == 10 {
-					entry.ColB = field
-				}
-			}
-			entryList = append(entryList, entry)
-		}
-	}
-	return entryList
-}
-
-func (app App) listBucketContent(bucketName string) string {
+func (app App) getBucketContent(bucketName string) *s3.ListObjectsOutput {
 	req, err := app.S3.ListObjects(&s3.ListObjectsInput{
 		Bucket: aws.String(bucketName),
 	})
@@ -94,16 +57,10 @@ func (app App) listBucketContent(bucketName string) string {
 		log.Fatalf("Unable list objects in %q, %v", bucketName, err)
 	}
 
-	out, err := json.Marshal(req)
-	if err != nil {
-		panic(err)
-	}
-
-	return string(out)
+	return req
 }
 
-func (app App) retrieveFileSize(bucketName, fileName string) string {
-
+func (app App) getFileFromBucket(bucketName, fileName string) *s3.GetObjectOutput {
 	rawData, err := app.S3.GetObject(
 		&s3.GetObjectInput{
 			Bucket: aws.String(bucketName),
@@ -113,39 +70,32 @@ func (app App) retrieveFileSize(bucketName, fileName string) string {
 	if err != nil {
 		log.Fatalf("Unable to get object %q, %v", fileName, err)
 	}
-	return fmt.Sprint("Downloaded", rawData.Metadata, rawData.ContentLength, "bytes")
+
+	return rawData
 }
 
 func (app App) parseAndCount(bucketName string) []FileParseResult {
-	req, err := app.S3.ListObjects(&s3.ListObjectsInput{
-		Bucket: aws.String(bucketName),
-	})
-
-	if err != nil {
-		log.Fatalf("Unable list objects in %q, %v", bucketName, err)
-	}
+	// List the csv files in the bucket
+	req := app.getBucketContent(bucketName)
 
 	var fileParseResults []FileParseResult
+	// For each file in the bucket :
 	for _, file := range req.Contents {
-		var entryList []CsvEntry
+		// Retrieve the current file from the bucket
+		rawData := app.getFileFromBucket(bucketName, *file.Key)
 
-		rawData, err := app.S3.GetObject(
-			&s3.GetObjectInput{
-				Bucket: aws.String(bucketName),
-				Key:    aws.String(*file.Key),
-			})
-
-		if err != nil {
-			log.Fatalf("Unable to get object %q, %v", *file.Key, err)
-		}
-
-		csvReader := csv.NewReader(rawData.Body)
-		data, err := csvReader.ReadAll()
+		//Read the file content as CSV
+		bytes, err := ioutil.ReadAll(rawData.Body)
 		if err != nil {
 			log.Fatal(err)
 		}
-		entryList = parseCsvEntry(data)
-		fileParseResults = append(fileParseResults, FileParseResult{FileName: *file.Key, RowCount: len(entryList)})
+
+		var entryList []CsvEntry
+		gocsv.UnmarshalBytes(bytes, entryList)
+
+		// Add parse the csv read result, and add the data to the parse results
+		fileParseResults = append(fileParseResults,
+			FileParseResult{FileName: *file.Key, RowCount: len(entryList)})
 	}
 	return fileParseResults
 }
