@@ -15,3 +15,4 @@
 # vendor/
 .aws-sam
 .devcontainer
+helloworld-go/node_modules/
