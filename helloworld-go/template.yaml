@@ -57,6 +57,24 @@ Resources:
         -
           S3ReadPolicy:
             BucketName: !Ref TestPerfBucket
+  PythonTestFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: python-test/
+      Handler: app.lambda_handler
+      Runtime: python3.7
+      Architectures:
+        - x86_64
+      Events:
+        NodeTest:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /python-test
+            Method: get
+      Policies:
+        -
+          S3ReadPolicy:
+            BucketName: !Ref TestPerfBucket
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
@@ -74,3 +92,6 @@ Outputs:
   NodeTestAPI:
     Description: "API Gateway endpoint URL for Prod environment for Node Test Function"
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/node-test/"
+  PythonTestAPI:
+    Description: "API Gateway endpoint URL for Prod environment for Python Test Function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/python-test/"
