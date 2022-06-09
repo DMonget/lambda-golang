@@ -45,6 +45,10 @@ Resources:
           Properties:
             Path: /node-test
             Method: get
+  TestPerfBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: testperf-bucket
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
